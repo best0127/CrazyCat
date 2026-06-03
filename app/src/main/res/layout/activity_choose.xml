@@ -23,11 +23,11 @@
         android:layout_height="64dp"
         android:layout_marginTop="16dp"
         android:text="@string/mode_simple"
-        android:textColor="@color/mode_button_text"
+        android:textColor="@color/mode_button_simple"
         android:layout_gravity="center"
         android:textStyle="bold"
         android:textSize="24sp"
-        android:background="@drawable/bg_mode_button" />
+        android:background="@drawable/bg_mode_button_simple" />
 
     <Button
         android:id="@+id/button2"
@@ -35,11 +35,11 @@
         android:layout_height="64dp"
         android:layout_marginTop="16dp"
         android:text="@string/mode_normal"
-        android:textColor="@color/mode_button_text"
+        android:textColor="@color/mode_button_normal"
         android:layout_gravity="center"
         android:textStyle="bold"
         android:textSize="24sp"
-        android:background="@drawable/bg_mode_button" />
+        android:background="@drawable/bg_mode_button_normal" />
 
     <Button
         android:id="@+id/button3"
@@ -47,11 +47,11 @@
         android:layout_height="64dp"
         android:layout_marginTop="16dp"
         android:text="@string/mode_hard"
-        android:textColor="@color/mode_button_text"
+        android:textColor="@color/mode_button_hard"
         android:layout_gravity="center"
         android:textStyle="bold"
         android:textSize="24sp"
-        android:background="@drawable/bg_mode_button" />
+        android:background="@drawable/bg_mode_button_hard" />
 
     <Button
         android:id="@+id/button4"

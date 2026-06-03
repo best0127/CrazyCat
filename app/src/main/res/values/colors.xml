@@ -4,8 +4,10 @@
     <color name="colorPrimaryDark">#0D6ABF</color>
     <color name="colorAccent">#FF4081</color>
     <color name="mode_title">#FFFFFF</color>
-    <color name="mode_button_text">#D84315</color>
-    <color name="mode_button_timed">#C62828</color>
+    <color name="mode_button_simple">#2E7D32</color>
+    <color name="mode_button_normal">#1565C0</color>
+    <color name="mode_button_hard">#6A1B9A</color>
+    <color name="mode_button_timed">#E65100</color>
 
     <!-- 对话框颜色 -->
     <color name="dialog_title">#333333</color>
