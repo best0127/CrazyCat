@@ -1,12 +1,23 @@
 <resources>
     <string name="app_name">围住神经猫</string>
-    <string name="title_activity_game">GameActivity</string>
-    <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
+    <string name="mode_select_title">模式选择</string>
+    <string name="mode_simple">简单模式</string>
+    <string name="mode_normal">普通模式</string>
+    <string name="mode_hard">困难模式</string>
+    <string name="mode_timed">限时模式</string>
 
-    <string name="hello_first_fragment">Hello first fragment</string>
-    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <!-- 对话框 -->
+    <string name="dialog_title_win">🎉 通关成功</string>
+    <string name="dialog_title_lose">😢 游戏结束</string>
+    <string name="dialog_title_timeout">⏰ 时间到</string>
+    <string name="dialog_msg_win">你用%1$d步捕捉到了神经猫</string>
+    <string name="dialog_msg_lose">你没能抓住神经猫</string>
+    <string name="dialog_msg_timeout">10秒限时已到，你没能抓住神经猫</string>
+    <string name="btn_back_to_mode">回到模式选择</string>
+    <string name="btn_back_to_home">回到主界面</string>
+    <string name="btn_cancel">继续游戏</string>
+    <string name="exit_dialog_title">退出游戏</string>
+    <string name="exit_dialog_message">确定要退出当前游戏吗？</string>
+    <string name="btn_exit">退出</string>
+    <string name="timed_mode_hint">你将有10秒时间完成游戏</string>
 </resources>

@@ -1,521 +1,560 @@
 package ndnu.tdy.CreazyCat.View;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
-
 import android.annotation.SuppressLint;
-import android.app.AlertDialog.Builder;
-import android.app.Instrumentation;
+import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
-import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.AlteredCharSequence;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
-import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.View.OnTouchListener;
-import android.widget.Toast;
-
-import javax.security.auth.Destroyable;
+import android.widget.Button;
+import android.widget.TextView;
 
 import ndnu.tdy.CreazyCat.Activity.ChooseActivity;
-import ndnu.tdy.CreazyCat.Activity.GameActivity;
 import ndnu.tdy.CreazyCat.Activity.MainActivity;
-import ndnu.tdy.CreazyCat.Music.MusicServer;
-import ndnu.tdy.CreazyCat.Music.MusicServer2;
-import ndnu.tdy.CreazyCat.Music.MusicServer3;
 import ndnu.tdy.CreazyCat.R;
 
 @SuppressLint("ViewConstructor")
-public class GameView extends SurfaceView implements OnTouchListener {
+public class GameView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
 
-    // 行数
-    private  int ROW ;
-    // 列数
-    private  int COL ;
-    //随机数
-    private int RAND;
-    //障碍数
-    private int BOCKS;
-    // 屏幕宽度
-    private int SCREEN_WIDTH;
-    // 每个通道的宽度
-    private int WIDTH;
-    // 奇数行和偶数行通道间的位置偏差量
-    private int DISTANCE;
-    // 屏幕顶端和通道最顶端间的距离
-    private int OFFSET;
-    // 整个通道与屏幕两端间的距离
-    private int length;
-    // 做成神经猫动态图效果的单张图片
-    private Drawable cat_drawable;
-    // 背景图
+    private static final String TAG = "GameView";
+
+    // 六边形方向常量
+    private static final int DIR_LEFT = 1;
+    private static final int DIR_TOP_LEFT = 2;
+    private static final int DIR_TOP_RIGHT = 3;
+    private static final int DIR_RIGHT = 4;
+    private static final int DIR_BOTTOM_RIGHT = 5;
+    private static final int DIR_BOTTOM_LEFT = 6;
+
+    // 动画参数
+    private static final int ANIM_FRAME_DELAY_MS = 65;
+    private static final int ANIM_INITIAL_DELAY_MS = 50;
+    private static final int COUNTDOWN_MS = 10_000;
+
+    // 猫逃跑距离阈值
+    private static final int ESCAPE_DISTANCE_THRESHOLD = 20;
+
+    private final int row;
+    private final int col;
+    private final int rand;
+    private final int obstacleCount;
+
+    private int screenWidth;
+    private int cellWidth;
+    private int topOffset;
+    private int leftPadding;
+
+    private final Drawable[] catFrames = new Drawable[16];
     private Drawable background;
-    // 神经猫动态图的索引
-    private int index = 0;
+    private int animFrameIndex = 0;
 
-    private Timer timer;
+    private Timer animTimer;
+    private TimerTask animTimerTask;
+    private Timer countdownTimer;
 
     private Point[][] matrix;
-
     private Point cat;
 
-    private TimerTask timerttask;
-
-    private Context context;
-
-    //行走的步数
     private int steps;
-
     private boolean canMove = true;
+    private volatile boolean surfaceValid = false;
 
-    Timer timer1;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private final Object canvasLock = new Object();
 
-    private int[] count = {10,9,8,7,6,5,4,3,2,1,0};
-    private int t=0;
+    public interface OnGameOverListener {
+        void onGameOver();
+    }
 
+    private OnGameOverListener onGameOverListener;
 
-    private int[] images = {R.drawable.cat1, R.drawable.cat2, R.drawable.cat3,
-            R.drawable.cat4, R.drawable.cat5, R.drawable.cat6, R.drawable.cat7,
-            R.drawable.cat8, R.drawable.cat9, R.drawable.cat10,
-            R.drawable.cat11, R.drawable.cat12, R.drawable.cat13,
-            R.drawable.cat14, R.drawable.cat15, R.drawable.cat16};
+    public void setOnGameOverListener(OnGameOverListener listener) {
+        this.onGameOverListener = listener;
+    }
 
-
-    public GameView(Context context, int row,int col ,int rand) {
-
+    public GameView(Context context, int row, int col, int rand) {
         super(context);
-        GetValue(row,col,rand);
-        TimeGame();
-        matrix = new Point[ROW][COL];
+        this.row = row;
+        this.col = col;
+        this.rand = rand;
+        this.obstacleCount = row * col / rand;
+        Log.d(TAG, "GameView created: row=" + row + ", col=" + col + ", rand=" + rand + ", obstacles=" + obstacleCount);
 
-        if (Build.VERSION.SDK_INT < 21) {
-            cat_drawable = getResources().getDrawable(images[index]);
-            background = getResources().getDrawable(R.drawable.bg);
-        } else {
-            cat_drawable = getResources().getDrawable(images[index], null);
-            background = getResources().getDrawable(R.drawable.bg, null);
-        }
-        this.context = context;
+        preloadDrawables(context);
         initGame();
-        getHolder().addCallback(callback);
+        getHolder().addCallback(this);
         setOnTouchListener(this);
-        this.setFocusable(true);
-        this.setFocusableInTouchMode(true);
+        setFocusable(true);
+        setFocusableInTouchMode(true);
     }
 
-    private void GetValue(int row,int col,int rand){
-        ROW=row;
-        COL=col;
-        RAND=rand;
-        BOCKS=ROW * COL/ RAND;
-    }
-
-    private void TimeGame(){
-        if( RAND == 4 ) {
-            timer1=new Timer();
-            timer1.schedule(new MyTask(), 10000);
+    private void preloadDrawables(Context context) {
+        int[] frameResIds = {
+                R.drawable.cat1, R.drawable.cat2, R.drawable.cat3, R.drawable.cat4,
+                R.drawable.cat5, R.drawable.cat6, R.drawable.cat7, R.drawable.cat8,
+                R.drawable.cat9, R.drawable.cat10, R.drawable.cat11, R.drawable.cat12,
+                R.drawable.cat13, R.drawable.cat14, R.drawable.cat15, R.drawable.cat16
+        };
+        for (int i = 0; i < frameResIds.length; i++) {
+            catFrames[i] = context.getDrawable(frameResIds[i]);
         }
-
+        background = context.getDrawable(R.drawable.bg);
+        Log.d(TAG, "preloaded " + catFrames.length + " cat frames");
     }
 
-    class MyTask extends TimerTask {
-        @Override
-        public void run() {
-            Looper.prepare();//增加部分
-            Builder dialog = new Builder(getContext());
-            dialog.setTitle("游戏结束");
-            dialog.setMessage("你没能抓住神经猫o(╥﹏╥)o");
-            dialog.setCancelable(false);
-            dialog.setNegativeButton("回到模式选择", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-
-                    getContext().startActivity(new Intent(getContext(),ChooseActivity.class).
-                            setFlags((Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)));
-                    onStop();
-//                    stopTimeGame();
-                    System.exit(0);
+    private void startCountdown() {
+        if (rand == 4) {
+            Log.d(TAG, "Starting countdown timer: " + COUNTDOWN_MS + "ms");
+            countdownTimer = new Timer();
+            countdownTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "Countdown finished, showing timeout dialog");
+                    uiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            showGameOverDialog(R.string.dialog_title_timeout, R.string.dialog_msg_timeout);
+                        }
+                    });
                 }
-            });
-            dialog.show();
-            Looper.loop();//增加部分
+            }, COUNTDOWN_MS);
         }
     }
 
-    public void stopTimeGame(){
-        timer1.purge();
-        timer1.cancel();
-    }
-
-    // 初始化游戏
     private void initGame() {
-
+        Log.d(TAG, "initGame");
         steps = 0;
-        for (int i = 0; i < ROW; i++) {
-            for (int j = 0; j < COL; j++) {
+        canMove = true;
+        matrix = new Point[row][col];
+
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < col; j++) {
                 matrix[i][j] = new Point(j, i);
-            }
-        }
-        for (int i = 0; i < ROW; i++) {
-            for (int j = 0; j < COL; j++) {
                 matrix[i][j].setStatus(Point.STATUS.STATUS_OFF);
             }
         }
-        cat = new Point(COL / 2 - 1, ROW / 2 - 1);
+
+        cat = new Point(col / 2 - 1, row / 2 - 1);
         getDot(cat.getX(), cat.getY()).setStatus(Point.STATUS.STATUS_IN);
-        for (int i = 0; i < BOCKS; ) {
-            int x = (int) ((Math.random() * 100) % COL);
-            int y = (int) ((Math.random() * 100) % ROW);
+        Log.d(TAG, "Cat initial position: (" + cat.getX() + ", " + cat.getY() + ")");
+
+        int placed = 0;
+        while (placed < obstacleCount) {
+            int x = (int) (Math.random() * col);
+            int y = (int) (Math.random() * row);
             if (getDot(x, y).getStatus() == Point.STATUS.STATUS_OFF) {
                 getDot(x, y).setStatus(Point.STATUS.STATUS_ON);
-                i++;
+                placed++;
             }
         }
-
-
+        Log.d(TAG, "Placed " + placed + " obstacles");
     }
 
-    // 绘图
+    // ==================== 绘图 ====================
+
     private void redraw() {
-        Canvas canvas = getHolder().lockCanvas();
-        canvas.drawColor(Color.rgb(0, 0x8c, 0xd7));
-        Paint paint = new Paint();
-        paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-        for (int i = 0; i < ROW; i++) {
-            for (int j = 0; j < COL; j++) {
-                DISTANCE = 0;
-                if (i % 2 != 0) {
-                    DISTANCE = WIDTH / 2;
+        if (!surfaceValid) return;
+        synchronized (canvasLock) {
+            if (!surfaceValid) return;
+            Canvas canvas = null;
+            try {
+                canvas = getHolder().lockCanvas();
+                if (canvas == null || !surfaceValid) return;
+
+                canvas.drawColor(Color.rgb(0, 0x8c, 0xd7));
+                Paint paint = new Paint();
+                paint.setFlags(Paint.ANTI_ALIAS_FLAG);
+
+                RectF rect = new RectF();
+                for (int i = 0; i < row; i++) {
+                    for (int j = 0; j < col; j++) {
+                        int offset = (i % 2 != 0) ? cellWidth / 2 : 0;
+                        Point dot = getDot(j, i);
+                        switch (dot.getStatus()) {
+                            case STATUS_IN:
+                                paint.setColor(0xFFEEEEEE);
+                                break;
+                            case STATUS_ON:
+                                paint.setColor(0xFFFFAA00);
+                                break;
+                            case STATUS_OFF:
+                                paint.setColor(0x74000000);
+                                break;
+                        }
+                        rect.set(
+                                dot.getX() * cellWidth + offset + leftPadding,
+                                dot.getY() * cellWidth + topOffset,
+                                (dot.getX() + 1) * cellWidth + offset + leftPadding,
+                                (dot.getY() + 1) * cellWidth + topOffset
+                        );
+                        canvas.drawOval(rect, paint);
+                    }
                 }
-                Point dot = getDot(j, i);
-                switch (dot.getStatus()) {
-                    case STATUS_IN:
-                        paint.setColor(0XFFEEEEEE);
-                        break;
-                    case STATUS_ON:
-                        paint.setColor(0XFFFFAA00);
-                        break;
-                    case STATUS_OFF:
-                        paint.setColor(0X74000000);
-                        break;
-                    default:
-                        break;
+
+                int catLeft;
+                int catTop;
+                if (cat.getY() % 2 == 0) {
+                    catLeft = cat.getX() * cellWidth;
+                } else {
+                    catLeft = (cellWidth / 2) + cat.getX() * cellWidth;
                 }
-                canvas.drawOval(new RectF(dot.getX() * WIDTH + DISTANCE
-                        + length, dot.getY() * WIDTH + OFFSET, (dot.getX() + 1)
-                        * WIDTH + DISTANCE + length, (dot.getY() + 1) * WIDTH
-                        + OFFSET), paint);
+                catTop = cat.getY() * cellWidth;
+
+                Drawable catDrawable = catFrames[animFrameIndex];
+                if (catDrawable != null) {
+                    catDrawable.setBounds(
+                            catLeft - cellWidth / 6 + leftPadding,
+                            catTop - cellWidth / 2 + topOffset,
+                            catLeft + cellWidth + leftPadding,
+                            catTop + cellWidth + topOffset
+                    );
+                    catDrawable.draw(canvas);
+                }
+
+                if (background != null) {
+                    background.setBounds(0, 0, screenWidth, topOffset);
+                    background.draw(canvas);
+                }
+            } catch (IllegalStateException e) {
+                // Surface 已释放，忽略
+                return;
+            } finally {
+                if (canvas != null && surfaceValid) {
+                    try {
+                        getHolder().unlockCanvasAndPost(canvas);
+                    } catch (IllegalStateException e) {
+                        // Surface 已释放，忽略
+                    }
+                }
             }
         }
-        int left;
-        int top;
-        if (cat.getY() % 2 == 0) {
-            left = cat.getX() * WIDTH;
-            top = cat.getY() * WIDTH;
-        } else {
-            left = (WIDTH / 2) + cat.getX() * WIDTH;
-            top = cat.getY() * WIDTH;
-        }
-        // 此处神经猫图片的位置是根据效果图来调整的
-        cat_drawable.setBounds(left - WIDTH / 6 + length, top - WIDTH / 2
-                + OFFSET, left + WIDTH + length, top + WIDTH + OFFSET);
-        cat_drawable.draw(canvas);
-        background.setBounds(0, 0, SCREEN_WIDTH, OFFSET);
-        background.draw(canvas);
-        getHolder().unlockCanvasAndPost(canvas);
     }
 
-    Callback callback = new Callback() {
-        public void surfaceCreated(SurfaceHolder holder) {
-            redraw();
-            startTimer();
-        }
+    // ==================== SurfaceHolder.Callback ====================
 
-        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            WIDTH = width / (COL + 1);
-            OFFSET = height - WIDTH * ROW - 2 * WIDTH;
-            length = WIDTH / 3;
-            SCREEN_WIDTH = width;
-        }
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.d(TAG, "surfaceCreated");
+        surfaceValid = true;
+        redraw();
+        startAnimTimer();
+        startCountdown();
+    }
 
-        public void surfaceDestroyed(SurfaceHolder holder) {
-            stopTimer();
-        }
-    };
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        cellWidth = width / (col + 1);
+        topOffset = height - cellWidth * row - 2 * cellWidth;
+        leftPadding = cellWidth / 3;
+        screenWidth = width;
+        Log.d(TAG, "surfaceChanged: " + width + "x" + height + ", cellWidth=" + cellWidth);
+    }
 
-    // 开启定时任务
-    private void startTimer() {
-        timer = new Timer();
-        timerttask = new TimerTask() {
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        Log.d(TAG, "surfaceDestroyed");
+        surfaceValid = false;
+        stopAnimTimer();
+        stopCountdown();
+    }
+
+    // ==================== 动画定时器 ====================
+
+    private void startAnimTimer() {
+        animTimer = new Timer();
+        animTimerTask = new TimerTask() {
+            @Override
             public void run() {
-                gifImage();
+                animFrameIndex = (animFrameIndex + 1) % catFrames.length;
+                redraw();
             }
         };
-        timer.schedule(timerttask, 50, 65);
+        animTimer.schedule(animTimerTask, ANIM_INITIAL_DELAY_MS, ANIM_FRAME_DELAY_MS);
+        Log.d(TAG, "Animation timer started");
     }
 
-    // 停止定时任务
-    public void stopTimer() {
-        timer.purge();
-        timer.cancel();
-//        timer.purge();
-    }
-
-    // 动态图
-    private void gifImage() {
-        index++;
-        if (index > images.length - 1) {
-            index = 0;
+    private void stopAnimTimer() {
+        if (animTimer != null) {
+            animTimer.cancel();
+            animTimer.purge();
+            animTimer = null;
+            Log.d(TAG, "Animation timer stopped");
         }
-        if (Build.VERSION.SDK_INT < 21) {
-            cat_drawable = getResources().getDrawable(images[index]);
-        } else {
-            cat_drawable = getResources().getDrawable(images[index], null);
-        }
-        redraw();
     }
 
-    // 获取通道对象
+    private void stopCountdown() {
+        if (countdownTimer != null) {
+            countdownTimer.cancel();
+            countdownTimer.purge();
+            countdownTimer = null;
+            Log.d(TAG, "Countdown timer stopped");
+        }
+    }
+
+    // ==================== 游戏逻辑 ====================
+
     private Point getDot(int x, int y) {
+        if (x < 0 || x >= col || y < 0 || y >= row) {
+            return null;
+        }
         return matrix[y][x];
     }
 
-    // 判断神经猫是否处于边界
     private boolean inEdge(Point dot) {
-        if (dot.getX() * dot.getY() == 0 || dot.getX() + 1 == COL
-                || dot.getY() + 1 == ROW) {
-            return true;
-        }
-        return false;
+        return dot.getX() == 0 || dot.getY() == 0
+                || dot.getX() + 1 == col || dot.getY() + 1 == row;
     }
 
-    // 移动cat至指定点
     private void moveTo(Point dot) {
         dot.setStatus(Point.STATUS.STATUS_IN);
         getDot(cat.getX(), cat.getY()).setStatus(Point.STATUS.STATUS_OFF);
         cat.setXY(dot.getX(), dot.getY());
     }
 
-    // 获取one在方向dir上的可移动距离
     private int getDistance(Point one, int dir) {
-        int distance = 0;
         if (inEdge(one)) {
             return 1;
         }
-        Point ori = one;
-        Point next;
+        int distance = 0;
+        Point current = one;
         while (true) {
-            next = getNeighbour(ori, dir);
+            Point next = getNeighbour(current, dir);
+            if (next == null) return distance * -1;
             if (next.getStatus() == Point.STATUS.STATUS_ON) {
                 return distance * -1;
             }
             if (inEdge(next)) {
-                distance++;
-                return distance;
+                return distance + 1;
             }
             distance++;
-            ori = next;
+            current = next;
         }
     }
 
-    // 获取dot的相邻点，返回其对象
     private Point getNeighbour(Point dot, int dir) {
+        int x = dot.getX();
+        int y = dot.getY();
+        boolean isOddRow = (y % 2 != 0);
+
         switch (dir) {
-            case 1:
-                return getDot(dot.getX() - 1, dot.getY());
-            case 2:
-                if (dot.getY() % 2 == 0) {
-                    return getDot(dot.getX() - 1, dot.getY() - 1);
-                } else {
-                    return getDot(dot.getX(), dot.getY() - 1);
-                }
-            case 3:
-                if (dot.getY() % 2 == 0) {
-                    return getDot(dot.getX(), dot.getY() - 1);
-                } else {
-                    return getDot(dot.getX() + 1, dot.getY() - 1);
-                }
-            case 4:
-                return getDot(dot.getX() + 1, dot.getY());
-            case 5:
-                if (dot.getY() % 2 == 0) {
-                    return getDot(dot.getX(), dot.getY() + 1);
-                } else {
-                    return getDot(dot.getX() + 1, dot.getY() + 1);
-                }
-            case 6:
-                if (dot.getY() % 2 == 0) {
-                    return getDot(dot.getX() - 1, dot.getY() + 1);
-                } else {
-                    return getDot(dot.getX(), dot.getY() + 1);
-                }
+            case DIR_LEFT:
+                return getDot(x - 1, y);
+            case DIR_TOP_LEFT:
+                return isOddRow ? getDot(x, y - 1) : getDot(x - 1, y - 1);
+            case DIR_TOP_RIGHT:
+                return isOddRow ? getDot(x + 1, y - 1) : getDot(x, y - 1);
+            case DIR_RIGHT:
+                return getDot(x + 1, y);
+            case DIR_BOTTOM_RIGHT:
+                return isOddRow ? getDot(x, y + 1) : getDot(x + 1, y + 1);
+            case DIR_BOTTOM_LEFT:
+                return isOddRow ? getDot(x - 1, y + 1) : getDot(x, y + 1);
+            default:
+                return null;
         }
-        return null;
     }
 
-    // cat的移动算法
     private void move() {
         if (inEdge(cat)) {
+            Log.d(TAG, "Cat is at edge, game over");
             failure();
             return;
         }
+
         Vector<Point> available = new Vector<>();
         Vector<Point> direct = new Vector<>();
-        HashMap<Point, Integer> hash = new HashMap<>();
-        for (int i = 1; i < 7; i++) {
+        HashMap<Point, Integer> directionMap = new HashMap<>();
+
+        for (int i = 1; i <= 6; i++) {
             Point n = getNeighbour(cat, i);
-            if (n.getStatus() == Point.STATUS.STATUS_OFF) {
+            if (n != null && n.getStatus() == Point.STATUS.STATUS_OFF) {
                 available.add(n);
-                hash.put(n, i);
+                directionMap.put(n, i);
                 if (getDistance(n, i) > 0) {
                     direct.add(n);
                 }
             }
         }
-        if (available.size() == 0) {
+
+        if (available.isEmpty()) {
+            Log.d(TAG, "Cat has no available moves, win!");
             win();
             canMove = false;
         } else if (available.size() == 1) {
             moveTo(available.get(0));
         } else {
             Point best = null;
-            if (direct.size() != 0) {
-                int min = 20;
-                for (int i = 0; i < direct.size(); i++) {
-                    if (inEdge(direct.get(i))) {
-                        best = direct.get(i);
+            if (!direct.isEmpty()) {
+                int min = ESCAPE_DISTANCE_THRESHOLD;
+                for (Point p : direct) {
+                    if (inEdge(p)) {
+                        best = p;
                         break;
-                    } else {
-                        int t = getDistance(direct.get(i),
-                                hash.get(direct.get(i)));
-                        if (t < min) {
-                            min = t;
-                            best = direct.get(i);
-                        }
+                    }
+                    int dist = getDistance(p, directionMap.get(p));
+                    if (dist < min) {
+                        min = dist;
+                        best = p;
                     }
                 }
             } else {
                 int max = 1;
-                for (int i = 0; i < available.size(); i++) {
-                    int k = getDistance(available.get(i),
-                            hash.get(available.get(i)));
-                    if (k < max) {
-                        max = k;
-                        best = available.get(i);
+                for (Point p : available) {
+                    int dist = getDistance(p, directionMap.get(p));
+                    if (dist < max) {
+                        max = dist;
+                        best = p;
                     }
                 }
             }
-            moveTo(best);
+            if (best != null) {
+                moveTo(best);
+            }
         }
+
         if (inEdge(cat)) {
+            Log.d(TAG, "Cat reached edge after move, game over");
             failure();
         }
     }
 
-    //停止背景音乐服务
-    protected void onStop(){
-        Intent intent = new Intent(context, MusicServer3.class);
-        context.stopService(intent);
-    }
+    // ==================== 游戏结果对话框 ====================
 
-    // 通关失败
-    public void failure() {
-        Builder dialog = new Builder(context);
-        dialog.setTitle("游戏结束");
-        dialog.setMessage("你没能抓住神经猫o(╥﹏╥)o");
-        dialog.setCancelable(false);
-        dialog.setNegativeButton("回到模式选择", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
+    private void showGameOverDialog(int titleResId, int messageResId, Object... formatArgs) {
+        Log.d(TAG, "showGameOverDialog: title=" + titleResId);
+        stopAnimTimer();
+        stopCountdown();
 
-                getContext().startActivity(new Intent(getContext(),ChooseActivity.class).
-                        setFlags((Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)));
-                onStop();
-                System.exit(0);
+        Context ctx = getContext();
+        View dialogView = ((android.app.Activity) ctx).getLayoutInflater()
+                .inflate(R.layout.dialog_game_result, null);
 
-            }
-        });
-        dialog.show();
-    }
+        TextView titleView = dialogView.findViewById(R.id.dialog_title);
+        TextView messageView = dialogView.findViewById(R.id.dialog_message);
+        Button btnMode = dialogView.findViewById(R.id.dialog_btn_mode);
+        Button btnHome = dialogView.findViewById(R.id.dialog_btn_home);
 
-    // 通关成功
-    private void win() {
-        Builder dialog = new Builder(context);
-        dialog.setTitle("通关成功");
-        dialog.setMessage("你用" + (steps + 1) + "步捕捉到了神经猫耶( •̀ ω •́ )y");
-        dialog.setCancelable(false);
-        dialog.setNegativeButton("回到模式选择", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-
-                getContext().startActivity(new Intent(getContext(),ChooseActivity.class).
-                        setFlags((Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)));
-                onStop();
-                System.exit(0);
-            }
-        });
-        dialog.show();
-    }
-
-    // 触屏事件
-    public boolean onTouch(View v, MotionEvent event) {
-
-        int x, y;
-        if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (event.getY() <= OFFSET) {
-                return true;
-            }
-            y = (int) ((event.getY() - OFFSET) / WIDTH);
-            if (y % 2 == 0) {
-                if (event.getX() <= length
-                        || event.getX() >= length + WIDTH * COL) {
-                    return true;
-                }
-                x = (int) ((event.getX() - length) / WIDTH);
-            } else {
-                if (event.getX() <= (length + WIDTH / 2)
-                        || event.getX() > (length + WIDTH / 2 + WIDTH * COL)) {
-                    return true;
-                }
-                x = (int) ((event.getX() - WIDTH / 2 - length) / WIDTH);
-            }
-            if (x + 1 > COL || y + 1 > ROW) {
-                return true;
-            } else if (inEdge(cat) || !canMove) {
-                initGame();
-                canMove = true;
-                return true;
-            } else if (getDot(x, y).getStatus() == Point.STATUS.STATUS_OFF) {
-                getDot(x, y).setStatus(Point.STATUS.STATUS_ON);
-                move();
-                steps++;
-            }
+        titleView.setText(titleResId);
+        if (formatArgs.length > 0) {
+            messageView.setText(ctx.getString(messageResId, formatArgs));
+        } else {
+            messageView.setText(messageResId);
         }
+
+        AlertDialog dialog = new AlertDialog.Builder(ctx, R.style.DialogTheme)
+                .setView(dialogView)
+                .create();
+
+        btnMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "Game over dialog: navigate to mode select");
+                dialog.dismiss();
+                ctx.startActivity(new Intent(ctx, ChooseActivity.class)
+                        .setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
+                if (onGameOverListener != null) {
+                    onGameOverListener.onGameOver();
+                }
+            }
+        });
+
+        btnHome.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "Game over dialog: navigate to home");
+                dialog.dismiss();
+                ctx.startActivity(new Intent(ctx, MainActivity.class)
+                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK));
+                if (onGameOverListener != null) {
+                    onGameOverListener.onGameOver();
+                }
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void failure() {
+        showGameOverDialog(R.string.dialog_title_lose, R.string.dialog_msg_lose);
+    }
+
+    private void win() {
+        showGameOverDialog(R.string.dialog_title_win, R.string.dialog_msg_win, steps + 1);
+    }
+
+    // ==================== 触摸事件 ====================
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        if (event.getAction() != MotionEvent.ACTION_UP) {
+            return true;
+        }
+
+        if (event.getY() <= topOffset) {
+            return true;
+        }
+
+        int touchY = (int) ((event.getY() - topOffset) / cellWidth);
+        int touchX;
+
+        if (touchY % 2 == 0) {
+            if (event.getX() <= leftPadding
+                    || event.getX() >= leftPadding + cellWidth * col) {
+                return true;
+            }
+            touchX = (int) ((event.getX() - leftPadding) / cellWidth);
+        } else {
+            if (event.getX() <= (leftPadding + cellWidth / 2)
+                    || event.getX() > (leftPadding + cellWidth / 2 + cellWidth * col)) {
+                return true;
+            }
+            touchX = (int) ((event.getX() - cellWidth / 2 - leftPadding) / cellWidth);
+        }
+
+        if (touchX + 1 > col || touchY + 1 > row) {
+            return true;
+        }
+
+        if (inEdge(cat) || !canMove) {
+            Log.d(TAG, "Touch on edge/cat stuck, restarting game");
+            initGame();
+            canMove = true;
+            return true;
+        }
+
+        Point touched = getDot(touchX, touchY);
+        if (touched != null && touched.getStatus() == Point.STATUS.STATUS_OFF) {
+            touched.setStatus(Point.STATUS.STATUS_ON);
+            move();
+            steps++;
+            Log.d(TAG, "Touch at (" + touchX + "," + touchY + "), steps=" + steps);
+        }
+
         return true;
     }
 
-    // 按键事件
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK ) {
-            stopTimer();
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+            Log.d(TAG, "Back key in GameView");
+            stopAnimTimer();
+            stopCountdown();
         }
         return super.onKeyDown(keyCode, event);
     }
-
 }

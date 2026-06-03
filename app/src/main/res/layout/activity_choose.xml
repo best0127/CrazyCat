@@ -1,70 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/bg1"
-    tools:context=".Activity.ChooseActivity">
+    android:background="@drawable/bg1">
 
     <TextView
         android:id="@+id/t1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="模式选择"
-        android:textSize="50dp"
+        android:text="@string/mode_select_title"
+        android:textSize="50sp"
         android:textStyle="bold"
-        android:textColor="#FF5722"
+        android:textColor="@color/mode_title"
         android:layout_gravity="center"
-        android:layout_marginTop="150dp"/>
+        android:layout_marginTop="150dp" />
+
     <Button
         android:id="@+id/button1"
         android:layout_width="200dp"
         android:layout_height="70dp"
         android:layout_marginTop="30dp"
-        android:text="简单模式"
-        android:textColor="#FF5722"
+        android:text="@string/mode_simple"
+        android:textColor="@color/mode_button_text"
         android:layout_gravity="center"
         android:textStyle="bold"
-        android:textSize="30dp"
-        android:background="@android:drawable/alert_light_frame"
-        />
+        android:textSize="30sp"
+        android:background="@android:drawable/alert_light_frame" />
 
     <Button
         android:id="@+id/button2"
         android:layout_width="200dp"
         android:layout_height="70dp"
-        android:text="普通模式"
-        android:textColor="#FF5722"
+        android:text="@string/mode_normal"
+        android:textColor="@color/mode_button_text"
         android:layout_gravity="center"
         android:textStyle="bold"
-        android:textSize="30dp"
-        android:background="@android:drawable/alert_light_frame"
-        />
+        android:textSize="30sp"
+        android:background="@android:drawable/alert_light_frame" />
 
     <Button
         android:id="@+id/button3"
         android:layout_width="200dp"
         android:layout_height="70dp"
-        android:text="困难模式"
-        android:textColor="#FF5722"
+        android:text="@string/mode_hard"
+        android:textColor="@color/mode_button_text"
         android:layout_gravity="center"
         android:textStyle="bold"
-        android:textSize="30dp"
-        android:background="@android:drawable/alert_light_frame"
- />
+        android:textSize="30sp"
+        android:background="@android:drawable/alert_light_frame" />
 
     <Button
         android:id="@+id/button4"
         android:layout_width="200dp"
         android:layout_height="70dp"
-        android:text="限时模式"
-        android:textColor="#F50000"
+        android:text="@string/mode_timed"
+        android:textColor="@color/mode_button_timed"
         android:layout_gravity="center"
         android:textStyle="bold"
-        android:textSize="30dp"
-        android:background="@android:drawable/alert_light_frame"
-        />
+        android:textSize="30sp"
+        android:background="@android:drawable/alert_light_frame" />
 
 </LinearLayout>

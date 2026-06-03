@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/bg_dialog">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:gravity="center"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:id="@+id/dialog_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/dialog_btn_mode"
+        style="@style/DialogButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_back_to_mode"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_dialog_button_accent"
+        android:layout_marginBottom="10dp" />
+
+    <Button
+        android:id="@+id/dialog_btn_home"
+        style="@style/DialogButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_back_to_home"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_dialog_button_accent" />
+
+</LinearLayout>

@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#1984D5</color>
-    <color name="colorPrimaryDark">#1984D5</color>
+    <color name="colorPrimaryDark">#0D6ABF</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="mode_title">#FF5722</color>
+    <color name="mode_button_text">#FF5722</color>
+    <color name="mode_button_timed">#F50000</color>
+
+    <!-- 对话框颜色 -->
+    <color name="dialog_title">#333333</color>
+    <color name="dialog_message">#666666</color>
+    <color name="dialog_button_text">#1984D5</color>
+    <color name="dialog_button_accent_text">#FFFFFF</color>
+    <color name="dialog_cancel_text">#999999</color>
+    <color name="dialog_background">#FFFFFF</color>
+    <color name="dialog_button_background">#F5F5F5</color>
+    <color name="dialog_stroke">#E0E0E0</color>
 </resources>
