@@ -13,6 +13,7 @@
     <string name="dialog_msg_win">你用%1$d步捕捉到了神经猫</string>
     <string name="dialog_msg_lose">你没能抓住神经猫</string>
     <string name="dialog_msg_timeout">10秒限时已到，你没能抓住神经猫</string>
+    <string name="btn_retry">再来一局</string>
     <string name="btn_back_to_mode">回到模式选择</string>
     <string name="btn_back_to_home">回到主界面</string>
     <string name="btn_cancel">继续游戏</string>
@@ -20,4 +21,5 @@
     <string name="exit_dialog_message">确定要退出当前游戏吗？</string>
     <string name="btn_exit">退出</string>
     <string name="timed_mode_hint">你将有10秒时间完成游戏</string>
+    <string name="btn_settings">设置</string>
 </resources>

@@ -7,6 +7,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 
+import ndnu.tdy.CreazyCat.GamePreferences;
 import ndnu.tdy.CreazyCat.R;
 
 public class ChooseActivity extends BaseActivity {
@@ -23,12 +24,27 @@ public class ChooseActivity extends BaseActivity {
     }
 
     private void setupListeners() {
+        GamePreferences prefs = new GamePreferences(this);
+
         int[] buttonIds = {R.id.button1, R.id.button2, R.id.button3, R.id.button4};
         int[] flags = {1, 2, 3, 4};
+        String[] modeNames = {
+                getString(R.string.mode_simple),
+                getString(R.string.mode_normal),
+                getString(R.string.mode_hard),
+                getString(R.string.mode_timed)
+        };
 
         for (int i = 0; i < buttonIds.length; i++) {
             Button button = findViewById(buttonIds[i]);
             final int flag = flags[i];
+
+            // 显示最佳成绩
+            int bestSteps = prefs.getBestSteps(flag);
+            if (bestSteps > 0) {
+                button.setText(modeNames[i] + " - 最佳: " + bestSteps + "步");
+            }
+
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

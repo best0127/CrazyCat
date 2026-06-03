@@ -27,14 +27,25 @@
         android:layout_marginBottom="24dp" />
 
     <Button
+        android:id="@+id/dialog_btn_retry"
+        style="@style/DialogButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/btn_retry"
+        android:textSize="15sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_dialog_button_accent"
+        android:layout_marginBottom="10dp" />
+
+    <Button
         android:id="@+id/dialog_btn_mode"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:text="@string/btn_back_to_mode"
         android:textSize="15sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/bg_dialog_button_accent"
+        android:textColor="#1984D5"
+        android:background="@android:color/transparent"
         android:layout_marginBottom="10dp" />
 
     <Button
@@ -44,7 +55,7 @@
         android:layout_height="48dp"
         android:text="@string/btn_back_to_home"
         android:textSize="15sp"
-        android:textColor="#FFFFFF"
-        android:background="@drawable/bg_dialog_button_accent" />
+        android:textColor="#1984D5"
+        android:background="@android:color/transparent" />
 
 </LinearLayout>

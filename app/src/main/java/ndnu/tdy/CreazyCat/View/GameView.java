@@ -1,19 +1,13 @@
 package ndnu.tdy.CreazyCat.View;
 
-import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.Vector;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -28,60 +22,37 @@ import ndnu.tdy.CreazyCat.Activity.ChooseActivity;
 import ndnu.tdy.CreazyCat.Activity.MainActivity;
 import ndnu.tdy.CreazyCat.R;
 
+/**
+ * 游戏主视图，协调 Engine、AI、Renderer，处理触摸和生命周期。
+ */
 @SuppressLint("ViewConstructor")
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, View.OnTouchListener {
 
     private static final String TAG = "GameView";
 
-    // 六边形方向常量
-    private static final int DIR_LEFT = 1;
-    private static final int DIR_TOP_LEFT = 2;
-    private static final int DIR_TOP_RIGHT = 3;
-    private static final int DIR_RIGHT = 4;
-    private static final int DIR_BOTTOM_RIGHT = 5;
-    private static final int DIR_BOTTOM_LEFT = 6;
-
-    // 动画参数
-    private static final int ANIM_FRAME_DELAY_MS = 65;
+    private static final int ANIM_FRAME_DELAY_MS = 40;
     private static final int ANIM_INITIAL_DELAY_MS = 50;
     private static final int COUNTDOWN_MS = 10_000;
 
-    // 猫逃跑距离阈值
-    private static final int ESCAPE_DISTANCE_THRESHOLD = 20;
-
-    private final int row;
-    private final int col;
-    private final int rand;
-    private final int obstacleCount;
-
-    private int screenWidth;
-    private int cellWidth;
-    private int topOffset;
-    private int leftPadding;
-
-    private final Drawable[] catFrames = new Drawable[16];
-    private Drawable background;
-    private int animFrameIndex = 0;
+    private final GameEngine engine;
+    private final CatAI ai;
+    private final GameRenderer renderer;
 
     private Timer animTimer;
-    private TimerTask animTimerTask;
     private Timer countdownTimer;
 
-    private Point[][] matrix;
-    private Point cat;
-
-    private int steps;
-    private boolean canMove = true;
     private volatile boolean surfaceValid = false;
-
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Object canvasLock = new Object();
 
+    private OnGameOverListener onGameOverListener;
+    private long countdownEndTime;
+
     public interface OnGameOverListener {
         void onGameOver();
+        void onRetry();
+        void onWin(int steps);
     }
-
-    private OnGameOverListener onGameOverListener;
 
     public void setOnGameOverListener(OnGameOverListener listener) {
         this.onGameOverListener = listener;
@@ -89,160 +60,32 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
 
     public GameView(Context context, int row, int col, int rand) {
         super(context);
-        this.row = row;
-        this.col = col;
-        this.rand = rand;
-        this.obstacleCount = row * col / rand;
-        Log.d(TAG, "GameView created: row=" + row + ", col=" + col + ", rand=" + rand + ", obstacles=" + obstacleCount);
+        engine = new GameEngine(row, col, rand);
+        ai = new CatAI(engine);
+        renderer = new GameRenderer(context, engine);
 
-        preloadDrawables(context);
-        initGame();
+        Log.d(TAG, "GameView created: " + row + "x" + col + ", rand=" + rand);
+        renderer.preloadDrawables(context);
+        engine.initGame();
         getHolder().addCallback(this);
         setOnTouchListener(this);
         setFocusable(true);
         setFocusableInTouchMode(true);
     }
 
-    private void preloadDrawables(Context context) {
-        int[] frameResIds = {
-                R.drawable.cat1, R.drawable.cat2, R.drawable.cat3, R.drawable.cat4,
-                R.drawable.cat5, R.drawable.cat6, R.drawable.cat7, R.drawable.cat8,
-                R.drawable.cat9, R.drawable.cat10, R.drawable.cat11, R.drawable.cat12,
-                R.drawable.cat13, R.drawable.cat14, R.drawable.cat15, R.drawable.cat16
-        };
-        for (int i = 0; i < frameResIds.length; i++) {
-            catFrames[i] = context.getDrawable(frameResIds[i]);
-        }
-        background = context.getDrawable(R.drawable.bg);
-        Log.d(TAG, "preloaded " + catFrames.length + " cat frames");
+    /**
+     * 获取当前模式的 rand 值，用于判断是否限时模式。
+     */
+    public int getRand() {
+        return engine.getCol() == 10 ? 4 : (engine.getRow() == 8 ? 4 : (engine.getRow() == 12 ? 6 : 5));
     }
 
-    private void startCountdown() {
-        if (rand == 4) {
-            Log.d(TAG, "Starting countdown timer: " + COUNTDOWN_MS + "ms");
-            countdownTimer = new Timer();
-            countdownTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    Log.d(TAG, "Countdown finished, showing timeout dialog");
-                    uiHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            showGameOverDialog(R.string.dialog_title_timeout, R.string.dialog_msg_timeout);
-                        }
-                    });
-                }
-            }, COUNTDOWN_MS);
-        }
-    }
+    // ==================== 重新开始 ====================
 
-    private void initGame() {
-        Log.d(TAG, "initGame");
-        steps = 0;
-        canMove = true;
-        matrix = new Point[row][col];
-
-        for (int i = 0; i < row; i++) {
-            for (int j = 0; j < col; j++) {
-                matrix[i][j] = new Point(j, i);
-                matrix[i][j].setStatus(Point.STATUS.STATUS_OFF);
-            }
-        }
-
-        cat = new Point(col / 2 - 1, row / 2 - 1);
-        getDot(cat.getX(), cat.getY()).setStatus(Point.STATUS.STATUS_IN);
-        Log.d(TAG, "Cat initial position: (" + cat.getX() + ", " + cat.getY() + ")");
-
-        int placed = 0;
-        while (placed < obstacleCount) {
-            int x = (int) (Math.random() * col);
-            int y = (int) (Math.random() * row);
-            if (getDot(x, y).getStatus() == Point.STATUS.STATUS_OFF) {
-                getDot(x, y).setStatus(Point.STATUS.STATUS_ON);
-                placed++;
-            }
-        }
-        Log.d(TAG, "Placed " + placed + " obstacles");
-    }
-
-    // ==================== 绘图 ====================
-
-    private void redraw() {
-        if (!surfaceValid) return;
-        synchronized (canvasLock) {
-            if (!surfaceValid) return;
-            Canvas canvas = null;
-            try {
-                canvas = getHolder().lockCanvas();
-                if (canvas == null || !surfaceValid) return;
-
-                canvas.drawColor(Color.rgb(0, 0x8c, 0xd7));
-                Paint paint = new Paint();
-                paint.setFlags(Paint.ANTI_ALIAS_FLAG);
-
-                RectF rect = new RectF();
-                for (int i = 0; i < row; i++) {
-                    for (int j = 0; j < col; j++) {
-                        int offset = (i % 2 != 0) ? cellWidth / 2 : 0;
-                        Point dot = getDot(j, i);
-                        switch (dot.getStatus()) {
-                            case STATUS_IN:
-                                paint.setColor(0xFFEEEEEE);
-                                break;
-                            case STATUS_ON:
-                                paint.setColor(0xFFFFAA00);
-                                break;
-                            case STATUS_OFF:
-                                paint.setColor(0x74000000);
-                                break;
-                        }
-                        rect.set(
-                                dot.getX() * cellWidth + offset + leftPadding,
-                                dot.getY() * cellWidth + topOffset,
-                                (dot.getX() + 1) * cellWidth + offset + leftPadding,
-                                (dot.getY() + 1) * cellWidth + topOffset
-                        );
-                        canvas.drawOval(rect, paint);
-                    }
-                }
-
-                int catLeft;
-                int catTop;
-                if (cat.getY() % 2 == 0) {
-                    catLeft = cat.getX() * cellWidth;
-                } else {
-                    catLeft = (cellWidth / 2) + cat.getX() * cellWidth;
-                }
-                catTop = cat.getY() * cellWidth;
-
-                Drawable catDrawable = catFrames[animFrameIndex];
-                if (catDrawable != null) {
-                    catDrawable.setBounds(
-                            catLeft - cellWidth / 6 + leftPadding,
-                            catTop - cellWidth / 2 + topOffset,
-                            catLeft + cellWidth + leftPadding,
-                            catTop + cellWidth + topOffset
-                    );
-                    catDrawable.draw(canvas);
-                }
-
-                if (background != null) {
-                    background.setBounds(0, 0, screenWidth, topOffset);
-                    background.draw(canvas);
-                }
-            } catch (IllegalStateException e) {
-                // Surface 已释放，忽略
-                return;
-            } finally {
-                if (canvas != null && surfaceValid) {
-                    try {
-                        getHolder().unlockCanvasAndPost(canvas);
-                    } catch (IllegalStateException e) {
-                        // Surface 已释放，忽略
-                    }
-                }
-            }
-        }
+    public void restartGame() {
+        Log.d(TAG, "restartGame");
+        engine.initGame();
+        redraw();
     }
 
     // ==================== SurfaceHolder.Callback ====================
@@ -258,11 +101,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        cellWidth = width / (col + 1);
-        topOffset = height - cellWidth * row - 2 * cellWidth;
-        leftPadding = cellWidth / 3;
-        screenWidth = width;
-        Log.d(TAG, "surfaceChanged: " + width + "x" + height + ", cellWidth=" + cellWidth);
+        renderer.updateDimensions(width, height);
+        Log.d(TAG, "surfaceChanged: " + width + "x" + height);
     }
 
     @Override
@@ -273,19 +113,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
         stopCountdown();
     }
 
-    // ==================== 动画定时器 ====================
+    // ==================== 定时器 ====================
 
     private void startAnimTimer() {
         animTimer = new Timer();
-        animTimerTask = new TimerTask() {
+        animTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                animFrameIndex = (animFrameIndex + 1) % catFrames.length;
+                renderer.advanceFrame();
                 redraw();
             }
-        };
-        animTimer.schedule(animTimerTask, ANIM_INITIAL_DELAY_MS, ANIM_FRAME_DELAY_MS);
-        Log.d(TAG, "Animation timer started");
+        }, ANIM_INITIAL_DELAY_MS, ANIM_FRAME_DELAY_MS);
     }
 
     private void stopAnimTimer() {
@@ -293,8 +131,50 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
             animTimer.cancel();
             animTimer.purge();
             animTimer = null;
-            Log.d(TAG, "Animation timer stopped");
         }
+    }
+
+    private void startCountdown() {
+        // rand==4 表示限时模式，通过 GameActivity 传入判断
+        // 这里通过检测 obstacleCount 推断：限时模式 100/4=25
+        int row = engine.getRow();
+        int col = engine.getCol();
+        boolean isTimed = (row == 10 && col == 10 && engine.getSteps() == 0);
+        // 由 GameActivity 调用 setTimedMode(true) 来标记
+    }
+
+    /**
+     * 由 GameActivity 调用，标记为限时模式并启动倒计时。
+     */
+    public void setTimedMode(boolean timed) {
+        if (timed) {
+            countdownEndTime = System.currentTimeMillis() + COUNTDOWN_MS;
+            countdownTimer = new Timer();
+            countdownTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    uiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            showGameOverDialog(R.string.dialog_title_timeout, R.string.dialog_msg_timeout);
+                        }
+                    });
+                }
+            }, COUNTDOWN_MS);
+        }
+    }
+
+    /**
+     * 获取剩余倒计时秒数（限时模式专用）。
+     */
+    public int getRemainingSeconds() {
+        if (countdownEndTime == 0) return -1;
+        long remaining = countdownEndTime - System.currentTimeMillis();
+        return (int) Math.max(0, remaining / 1000);
+    }
+
+    public boolean isTimedMode() {
+        return countdownEndTime > 0;
     }
 
     private void stopCountdown() {
@@ -302,141 +182,55 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
             countdownTimer.cancel();
             countdownTimer.purge();
             countdownTimer = null;
-            Log.d(TAG, "Countdown timer stopped");
         }
     }
 
-    // ==================== 游戏逻辑 ====================
+    // ==================== 渲染 ====================
 
-    private Point getDot(int x, int y) {
-        if (x < 0 || x >= col || y < 0 || y >= row) {
-            return null;
-        }
-        return matrix[y][x];
-    }
+    private void redraw() {
+        if (!surfaceValid) return;
+        synchronized (canvasLock) {
+            if (!surfaceValid) return;
+            Canvas canvas = null;
+            try {
+                canvas = getHolder().lockCanvas();
+                if (canvas == null || !surfaceValid) return;
+                renderer.draw(canvas);
 
-    private boolean inEdge(Point dot) {
-        return dot.getX() == 0 || dot.getY() == 0
-                || dot.getX() + 1 == col || dot.getY() + 1 == row;
-    }
-
-    private void moveTo(Point dot) {
-        dot.setStatus(Point.STATUS.STATUS_IN);
-        getDot(cat.getX(), cat.getY()).setStatus(Point.STATUS.STATUS_OFF);
-        cat.setXY(dot.getX(), dot.getY());
-    }
-
-    private int getDistance(Point one, int dir) {
-        if (inEdge(one)) {
-            return 1;
-        }
-        int distance = 0;
-        Point current = one;
-        while (true) {
-            Point next = getNeighbour(current, dir);
-            if (next == null) return distance * -1;
-            if (next.getStatus() == Point.STATUS.STATUS_ON) {
-                return distance * -1;
-            }
-            if (inEdge(next)) {
-                return distance + 1;
-            }
-            distance++;
-            current = next;
-        }
-    }
-
-    private Point getNeighbour(Point dot, int dir) {
-        int x = dot.getX();
-        int y = dot.getY();
-        boolean isOddRow = (y % 2 != 0);
-
-        switch (dir) {
-            case DIR_LEFT:
-                return getDot(x - 1, y);
-            case DIR_TOP_LEFT:
-                return isOddRow ? getDot(x, y - 1) : getDot(x - 1, y - 1);
-            case DIR_TOP_RIGHT:
-                return isOddRow ? getDot(x + 1, y - 1) : getDot(x, y - 1);
-            case DIR_RIGHT:
-                return getDot(x + 1, y);
-            case DIR_BOTTOM_RIGHT:
-                return isOddRow ? getDot(x, y + 1) : getDot(x + 1, y + 1);
-            case DIR_BOTTOM_LEFT:
-                return isOddRow ? getDot(x - 1, y + 1) : getDot(x, y + 1);
-            default:
-                return null;
-        }
-    }
-
-    private void move() {
-        if (inEdge(cat)) {
-            Log.d(TAG, "Cat is at edge, game over");
-            failure();
-            return;
-        }
-
-        Vector<Point> available = new Vector<>();
-        Vector<Point> direct = new Vector<>();
-        HashMap<Point, Integer> directionMap = new HashMap<>();
-
-        for (int i = 1; i <= 6; i++) {
-            Point n = getNeighbour(cat, i);
-            if (n != null && n.getStatus() == Point.STATUS.STATUS_OFF) {
-                available.add(n);
-                directionMap.put(n, i);
-                if (getDistance(n, i) > 0) {
-                    direct.add(n);
-                }
-            }
-        }
-
-        if (available.isEmpty()) {
-            Log.d(TAG, "Cat has no available moves, win!");
-            win();
-            canMove = false;
-        } else if (available.size() == 1) {
-            moveTo(available.get(0));
-        } else {
-            Point best = null;
-            if (!direct.isEmpty()) {
-                int min = ESCAPE_DISTANCE_THRESHOLD;
-                for (Point p : direct) {
-                    if (inEdge(p)) {
-                        best = p;
-                        break;
-                    }
-                    int dist = getDistance(p, directionMap.get(p));
-                    if (dist < min) {
-                        min = dist;
-                        best = p;
+                // 限时模式绘制倒计时
+                if (isTimedMode()) {
+                    int seconds = getRemainingSeconds();
+                    if (seconds >= 0) {
+                        android.graphics.Paint textPaint = new android.graphics.Paint();
+                        textPaint.setAntiAlias(true);
+                        textPaint.setTextSize(renderer.getCellWidth() * 0.8f);
+                        textPaint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                        textPaint.setColor(seconds <= 3 ? 0xFFFF0000 : 0xFFFFFFFF);
+                        textPaint.setShadowLayer(4f, 2f, 2f, 0x80000000);
+                        canvas.drawText(String.valueOf(seconds),
+                                renderer.getScreenWidth() / 2f,
+                                renderer.getTopOffset() / 2f + renderer.getCellWidth() * 0.3f,
+                                textPaint);
                     }
                 }
-            } else {
-                int max = 1;
-                for (Point p : available) {
-                    int dist = getDistance(p, directionMap.get(p));
-                    if (dist < max) {
-                        max = dist;
-                        best = p;
+            } catch (IllegalStateException e) {
+                return;
+            } finally {
+                if (canvas != null && surfaceValid) {
+                    try {
+                        getHolder().unlockCanvasAndPost(canvas);
+                    } catch (IllegalStateException e) {
+                        // ignore
                     }
                 }
             }
-            if (best != null) {
-                moveTo(best);
-            }
-        }
-
-        if (inEdge(cat)) {
-            Log.d(TAG, "Cat reached edge after move, game over");
-            failure();
         }
     }
 
-    // ==================== 游戏结果对话框 ====================
+    // ==================== 游戏结果 ====================
 
     private void showGameOverDialog(int titleResId, int messageResId, Object... formatArgs) {
-        Log.d(TAG, "showGameOverDialog: title=" + titleResId);
+        Log.d(TAG, "showGameOverDialog: " + titleResId);
         stopAnimTimer();
         stopCountdown();
 
@@ -446,6 +240,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
 
         TextView titleView = dialogView.findViewById(R.id.dialog_title);
         TextView messageView = dialogView.findViewById(R.id.dialog_message);
+        Button btnRetry = dialogView.findViewById(R.id.dialog_btn_retry);
         Button btnMode = dialogView.findViewById(R.id.dialog_btn_mode);
         Button btnHome = dialogView.findViewById(R.id.dialog_btn_home);
 
@@ -460,10 +255,24 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
                 .setView(dialogView)
                 .create();
 
+        btnRetry.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+                engine.initGame();
+                countdownEndTime = 0;
+                redraw();
+                startAnimTimer();
+                // 重新启动倒计时（如果是限时模式需要由外部设置）
+                if (onGameOverListener != null) {
+                    onGameOverListener.onRetry();
+                }
+            }
+        });
+
         btnMode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "Game over dialog: navigate to mode select");
                 dialog.dismiss();
                 ctx.startActivity(new Intent(ctx, ChooseActivity.class)
                         .setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
@@ -476,7 +285,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
         btnHome.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "Game over dialog: navigate to home");
                 dialog.dismiss();
                 ctx.startActivity(new Intent(ctx, MainActivity.class)
                         .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -494,55 +302,66 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
     }
 
     private void win() {
-        showGameOverDialog(R.string.dialog_title_win, R.string.dialog_msg_win, steps + 1);
+        int steps = engine.getSteps() + 1;
+        showGameOverDialog(R.string.dialog_title_win, R.string.dialog_msg_win, steps);
+        if (onGameOverListener != null) {
+            onGameOverListener.onWin(steps);
+        }
     }
 
     // ==================== 触摸事件 ====================
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if (event.getAction() != MotionEvent.ACTION_UP) {
-            return true;
-        }
+        if (event.getAction() != MotionEvent.ACTION_UP) return true;
+        if (event.getY() <= renderer.getTopOffset()) return true;
 
-        if (event.getY() <= topOffset) {
-            return true;
-        }
-
-        int touchY = (int) ((event.getY() - topOffset) / cellWidth);
+        int touchY = (int) ((event.getY() - renderer.getTopOffset()) / renderer.getCellWidth());
         int touchX;
+        int col = engine.getCol();
 
         if (touchY % 2 == 0) {
-            if (event.getX() <= leftPadding
-                    || event.getX() >= leftPadding + cellWidth * col) {
+            if (event.getX() <= renderer.getLeftPadding()
+                    || event.getX() >= renderer.getLeftPadding() + renderer.getCellWidth() * col) {
                 return true;
             }
-            touchX = (int) ((event.getX() - leftPadding) / cellWidth);
+            touchX = (int) ((event.getX() - renderer.getLeftPadding()) / renderer.getCellWidth());
         } else {
-            if (event.getX() <= (leftPadding + cellWidth / 2)
-                    || event.getX() > (leftPadding + cellWidth / 2 + cellWidth * col)) {
+            if (event.getX() <= (renderer.getLeftPadding() + renderer.getCellWidth() / 2)
+                    || event.getX() > (renderer.getLeftPadding() + renderer.getCellWidth() / 2 + renderer.getCellWidth() * col)) {
                 return true;
             }
-            touchX = (int) ((event.getX() - cellWidth / 2 - leftPadding) / cellWidth);
+            touchX = (int) ((event.getX() - renderer.getCellWidth() / 2 - renderer.getLeftPadding()) / renderer.getCellWidth());
         }
 
-        if (touchX + 1 > col || touchY + 1 > row) {
+        if (touchX + 1 > col || touchY + 1 > engine.getRow()) return true;
+
+        // 游戏已结束，触摸重新开始
+        if (engine.inEdge(engine.getCat()) || !engine.canMove()) {
+            Log.d(TAG, "Game over, restarting");
+            engine.initGame();
+            countdownEndTime = 0;
+            redraw();
+            startAnimTimer();
             return true;
         }
 
-        if (inEdge(cat) || !canMove) {
-            Log.d(TAG, "Touch on edge/cat stuck, restarting game");
-            initGame();
-            canMove = true;
-            return true;
-        }
-
-        Point touched = getDot(touchX, touchY);
-        if (touched != null && touched.getStatus() == Point.STATUS.STATUS_OFF) {
-            touched.setStatus(Point.STATUS.STATUS_ON);
-            move();
-            steps++;
-            Log.d(TAG, "Touch at (" + touchX + "," + touchY + "), steps=" + steps);
+        // 放置障碍物
+        if (engine.placeObstacle(touchX, touchY)) {
+            // 猫移动
+            Point nextMove = ai.evaluateMove(engine.getCat());
+            if (nextMove == null) {
+                // 猫被困住，玩家获胜
+                engine.setCanMove(false);
+                win();
+            } else {
+                engine.moveCatTo(nextMove);
+                if (engine.inEdge(engine.getCat())) {
+                    failure();
+                }
+            }
+            redraw();
+            Log.d(TAG, "Touch at (" + touchX + "," + touchY + "), steps=" + engine.getSteps());
         }
 
         return true;
@@ -551,10 +370,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
     @Override
     public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
         if (keyCode == android.view.KeyEvent.KEYCODE_BACK) {
-            Log.d(TAG, "Back key in GameView");
             stopAnimTimer();
             stopCountdown();
         }
         return super.onKeyDown(keyCode, event);
     }
+
 }

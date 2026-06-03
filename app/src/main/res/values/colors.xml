@@ -16,4 +16,12 @@
     <color name="dialog_background">#FFFFFF</color>
     <color name="dialog_button_background">#F5F5F5</color>
     <color name="dialog_stroke">#E0E0E0</color>
+
+    <!-- 游戏颜色 -->
+    <color name="game_background">#008CD7</color>
+    <color name="cell_empty">#74000000</color>
+    <color name="cell_obstacle">#FFAA00</color>
+    <color name="cell_cat">#EEEEEE</color>
+    <color name="countdown_normal">#FFFFFF</color>
+    <color name="countdown_urgent">#FF0000</color>
 </resources>

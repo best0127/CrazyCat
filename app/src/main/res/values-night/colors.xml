@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#1984D5</color>
+    <color name="colorPrimaryDark">#0D6ABF</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <!-- 深色模式对话框颜色 -->
+    <color name="dialog_title">#FFFFFF</color>
+    <color name="dialog_message">#B0B0B0</color>
+    <color name="dialog_background">#2C2C2C</color>
+    <color name="dialog_stroke">#444444</color>
+</resources>

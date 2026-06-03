@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import ndnu.tdy.CreazyCat.GamePreferences;
 import ndnu.tdy.CreazyCat.R;
 import ndnu.tdy.CreazyCat.View.GameView;
 
@@ -19,6 +20,7 @@ public class GameActivity extends BaseActivity {
     private int col;
     private int row;
     private int rand;
+    private GameView gameView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,20 +35,42 @@ public class GameActivity extends BaseActivity {
         Log.d(TAG, "startGame: flag=" + flag);
 
         switch (flag) {
-            case 1: row = 8;  col = 8;  rand = 4; break;  // 简单: 64格, 16障碍
-            case 2: row = 10; col = 10; rand = 5; break;  // 普通: 100格, 20障碍
-            case 3: row = 12; col = 12; rand = 6; break;  // 困难: 144格, 24障碍
-            case 4: row = 10; col = 10; rand = 4; break;  // 限时: 100格, 25障碍
+            case 1: row = 8;  col = 8;  rand = 4; break;  // 简单
+            case 2: row = 10; col = 10; rand = 5; break;  // 普通
+            case 3: row = 12; col = 12; rand = 6; break;  // 困难
+            case 4: row = 10; col = 10; rand = 4; break;  // 限时
         }
         Log.d(TAG, "row=" + row + ", col=" + col + ", rand=" + rand);
 
         FrameLayout container = new FrameLayout(this);
 
-        GameView gameView = new GameView(this, row, col, rand);
+        gameView = new GameView(this, row, col, rand);
+        gameView.setOnGameOverListener(new GameView.OnGameOverListener() {
+            @Override
+            public void onGameOver() {
+                finish();
+            }
+
+            @Override
+            public void onRetry() {
+                // 重新开始时，如果是限时模式需要重新启动倒计时
+                if (rand == 4) {
+                    gameView.setTimedMode(true);
+                }
+            }
+
+            @Override
+            public void onWin(int steps) {
+                // 保存最佳成绩
+                int mode = getIntent().getIntExtra("flag", 1);
+                new GamePreferences(GameActivity.this).updateBestSteps(mode, steps);
+            }
+        });
         container.addView(gameView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
+        // 退出按钮
         ImageView exitButton = new ImageView(this);
         exitButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
         exitButton.setBackgroundResource(R.drawable.bg_back_button);
@@ -68,6 +92,11 @@ public class GameActivity extends BaseActivity {
         });
 
         setContentView(container);
+
+        // 限时模式启动倒计时
+        if (rand == 4) {
+            gameView.setTimedMode(true);
+        }
     }
 
     private void showExitDialog() {
