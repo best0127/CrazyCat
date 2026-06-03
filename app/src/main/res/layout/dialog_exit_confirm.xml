@@ -3,57 +3,57 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="32dp"
     android:background="@drawable/bg_dialog">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/exit_dialog_title"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#333333"
+        android:textColor="#222222"
         android:gravity="center"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/exit_dialog_message"
-        android:textSize="16sp"
-        android:textColor="#666666"
+        android:textSize="15sp"
+        android:textColor="#555555"
         android:gravity="center"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="32dp" />
 
     <Button
         android:id="@+id/btn_exit_to_mode"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_back_to_mode"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#FFFFFF"
         android:background="@drawable/bg_dialog_button_accent"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="12dp" />
 
     <Button
         android:id="@+id/btn_exit_to_home"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_back_to_home"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#FFFFFF"
         android:background="@drawable/bg_dialog_button_accent"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="12dp" />
 
     <Button
         android:id="@+id/btn_exit_cancel"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_cancel"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#999999"
         android:background="@android:color/transparent" />
 

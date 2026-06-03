@@ -3,58 +3,58 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:padding="32dp"
     android:background="@drawable/bg_dialog">
 
     <TextView
         android:id="@+id/dialog_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#333333"
+        android:textColor="#222222"
         android:gravity="center"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:id="@+id/dialog_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="#666666"
+        android:textSize="15sp"
+        android:textColor="#555555"
         android:gravity="center"
-        android:lineSpacingExtra="4dp"
-        android:layout_marginBottom="24dp" />
+        android:lineSpacingExtra="6dp"
+        android:layout_marginBottom="32dp" />
 
     <Button
         android:id="@+id/dialog_btn_retry"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_retry"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#FFFFFF"
         android:background="@drawable/bg_dialog_button_accent"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="12dp" />
 
     <Button
         android:id="@+id/dialog_btn_mode"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_back_to_mode"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#1984D5"
         android:background="@android:color/transparent"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="12dp" />
 
     <Button
         android:id="@+id/dialog_btn_home"
         style="@style/DialogButtonStyle"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/btn_back_to_home"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textColor="#1984D5"
         android:background="@android:color/transparent" />
 
