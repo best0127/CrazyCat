@@ -10,11 +10,6 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".Activity.SettingsActivity"
-            android:exported="true"
-            android:screenOrientation="portrait" />
-
-        <activity
             android:name=".Activity.GameActivity"
             android:exported="true"
             android:screenOrientation="portrait" />

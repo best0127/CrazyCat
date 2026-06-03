@@ -1,14 +1,11 @@
 package ndnu.tdy.CreazyCat.Activity;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-
-import androidx.appcompat.app.AppCompatDelegate;
 
 import ndnu.tdy.CreazyCat.GamePreferences;
 import ndnu.tdy.CreazyCat.R;
@@ -34,36 +31,10 @@ public class MainActivity extends BaseActivity {
             }
         });
 
-        // 设置按钮
-        ImageView settingsButton = findViewById(R.id.settings_button);
-        settingsButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, SettingsActivity.class));
-            }
-        });
-
-        // 应用主题设置
-        GamePreferences prefs = new GamePreferences(this);
-        applyTheme(prefs.getThemeMode());
-
         // 新手引导
+        GamePreferences prefs = new GamePreferences(this);
         if (!prefs.isGuideShown()) {
             showGuide(prefs);
-        }
-    }
-
-    private void applyTheme(int mode) {
-        switch (mode) {
-            case 1:
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-                break;
-            case 2:
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-                break;
-            default:
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-                break;
         }
     }
 

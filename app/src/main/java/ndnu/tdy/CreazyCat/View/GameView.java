@@ -135,12 +135,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Vie
     }
 
     private void startCountdown() {
-        // rand==4 表示限时模式，通过 GameActivity 传入判断
-        // 这里通过检测 obstacleCount 推断：限时模式 100/4=25
-        int row = engine.getRow();
-        int col = engine.getCol();
-        boolean isTimed = (row == 10 && col == 10 && engine.getSteps() == 0);
-        // 由 GameActivity 调用 setTimedMode(true) 来标记
+        // 限时模式由 GameActivity 调用 setTimedMode(true) 启动
     }
 
     /**

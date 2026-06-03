@@ -20,6 +20,7 @@ public class GameActivity extends BaseActivity {
     private int col;
     private int row;
     private int rand;
+    private boolean isTimedMode;
     private GameView gameView;
 
     @Override
@@ -33,12 +34,13 @@ public class GameActivity extends BaseActivity {
     private void startGame() {
         int flag = getIntent().getIntExtra("flag", 1);
         Log.d(TAG, "startGame: flag=" + flag);
+        isTimedMode = (flag == 4);
 
         switch (flag) {
-            case 1: row = 8;  col = 8;  rand = 4; break;  // 简单
-            case 2: row = 10; col = 10; rand = 5; break;  // 普通
-            case 3: row = 12; col = 12; rand = 6; break;  // 困难
-            case 4: row = 10; col = 10; rand = 4; break;  // 限时
+            case 1: row = 8;  col = 8;  rand = 5; break;  // 简单
+            case 2: row = 10; col = 10; rand = 6; break;  // 普通
+            case 3: row = 12; col = 12; rand = 7; break;  // 困难
+            case 4: row = 10; col = 10; rand = 5; break;  // 限时
         }
         Log.d(TAG, "row=" + row + ", col=" + col + ", rand=" + rand);
 
@@ -54,7 +56,7 @@ public class GameActivity extends BaseActivity {
             @Override
             public void onRetry() {
                 // 重新开始时，如果是限时模式需要重新启动倒计时
-                if (rand == 4) {
+                if (isTimedMode) {
                     gameView.setTimedMode(true);
                 }
             }
@@ -94,7 +96,7 @@ public class GameActivity extends BaseActivity {
         setContentView(container);
 
         // 限时模式启动倒计时
-        if (rand == 4) {
+        if (isTimedMode) {
             gameView.setTimedMode(true);
         }
     }
