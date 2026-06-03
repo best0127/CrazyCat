@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:background="@drawable/bg_dialog">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🎮 游戏玩法"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#222222"
+        android:gravity="center"
+        android:layout_marginBottom="20dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1. 点击空白格子放置障碍物\n\n2. 阻止小猫逃到地图边缘\n\n3. 在猫到达边缘前围住它即可获胜\n\n💡 提示：猫会自动选择最佳逃跑路线！"
+        android:textSize="15sp"
+        android:textColor="#555555"
+        android:lineSpacingExtra="6dp"
+        android:layout_marginBottom="24dp" />
+
+</LinearLayout>

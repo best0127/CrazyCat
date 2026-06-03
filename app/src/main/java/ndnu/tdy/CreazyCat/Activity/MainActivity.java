@@ -36,12 +36,10 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showGuide() {
-        new AlertDialog.Builder(this)
-                .setTitle("🎮 游戏玩法")
-                .setMessage("1. 点击空白格子放置障碍物\n\n" +
-                        "2. 阻止小猫逃到地图边缘\n\n" +
-                        "3. 在猫到达边缘前围住它即可获胜\n\n" +
-                        "💡 提示：注意猫会自动选择最佳逃跑路线！")
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_guide, null);
+
+        new AlertDialog.Builder(this, R.style.DialogTheme)
+                .setView(dialogView)
                 .setPositiveButton("知道了", null)
                 .show();
     }
