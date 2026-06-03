@@ -38,9 +38,17 @@ public class MainActivity extends BaseActivity {
     private void showGuide() {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_guide, null);
 
-        new AlertDialog.Builder(this, R.style.DialogTheme)
+        final AlertDialog dialog = new AlertDialog.Builder(this, R.style.DialogTheme)
                 .setView(dialogView)
-                .setPositiveButton("知道了", null)
-                .show();
+                .create();
+
+        dialogView.findViewById(R.id.btn_guide_ok).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
     }
 }

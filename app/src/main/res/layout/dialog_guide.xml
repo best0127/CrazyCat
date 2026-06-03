@@ -23,6 +23,16 @@
         android:textSize="15sp"
         android:textColor="#555555"
         android:lineSpacingExtra="6dp"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="28dp" />
+
+    <Button
+        android:id="@+id/btn_guide_ok"
+        style="@style/DialogButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="知道了"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_dialog_button_accent" />
 
 </LinearLayout>
