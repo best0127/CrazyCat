@@ -31,27 +31,18 @@ public class MainActivity extends BaseActivity {
             }
         });
 
-        // 新手引导
-        GamePreferences prefs = new GamePreferences(this);
-        if (!prefs.isGuideShown()) {
-            showGuide(prefs);
-        }
+        // 每次启动都显示玩法提示
+        showGuide();
     }
 
-    private void showGuide(final GamePreferences prefs) {
-        new AlertDialog.Builder(this, R.style.DialogTheme)
+    private void showGuide() {
+        new AlertDialog.Builder(this)
                 .setTitle("🎮 游戏玩法")
                 .setMessage("1. 点击空白格子放置障碍物\n\n" +
                         "2. 阻止小猫逃到地图边缘\n\n" +
                         "3. 在猫到达边缘前围住它即可获胜\n\n" +
                         "💡 提示：注意猫会自动选择最佳逃跑路线！")
                 .setPositiveButton("知道了", null)
-                .setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
-                    @Override
-                    public void onDismiss(android.content.DialogInterface dialog) {
-                        prefs.setGuideShown();
-                    }
-                })
                 .show();
     }
 }
