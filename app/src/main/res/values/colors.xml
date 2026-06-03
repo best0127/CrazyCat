@@ -3,9 +3,9 @@
     <color name="colorPrimary">#1984D5</color>
     <color name="colorPrimaryDark">#0D6ABF</color>
     <color name="colorAccent">#FF4081</color>
-    <color name="mode_title">#FF5722</color>
-    <color name="mode_button_text">#FF5722</color>
-    <color name="mode_button_timed">#F50000</color>
+    <color name="mode_title">#FFFFFF</color>
+    <color name="mode_button_text">#D84315</color>
+    <color name="mode_button_timed">#C62828</color>
 
     <!-- 对话框颜色 -->
     <color name="dialog_title">#333333</color>
